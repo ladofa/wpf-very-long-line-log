@@ -52,6 +52,7 @@ namespace WpfApp3
 				{
 					while (!quit)
 					{
+						//create new text block for every about 8000 length.
 						if (currentSb == null)
 						{
 							currentSb = new StringBuilder();
@@ -64,7 +65,10 @@ namespace WpfApp3
 							}));
 						}
 
+						//generate new string
 						string nuString = (lineNum++).ToString() + ":" + RandomString(80) + "\n";
+
+						//StringBuilder is for non-ui-process.
 						currentSb.AppendLine(nuString);
 
 						Dispatcher.Invoke(new Action(() =>
@@ -73,8 +77,11 @@ namespace WpfApp3
 							MyScrollViewer.ScrollToEnd();
 						}));
 
+						//if current text block is too long...
 						if (currentSb.Length > 8000)
 						{
+							//save strings for other non-ui-process
+							oldStrings.Add(currentSb.ToString());
 							currentSb = null;
 							currentTextBox = null;
 						}
