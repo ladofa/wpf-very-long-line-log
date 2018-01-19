@@ -28,9 +28,9 @@ namespace WpfApp3
 		}
 
 		System.Threading.Thread thread;
-		bool quit = true;
-
+		
 		private int lineNum = 0;
+
 		private static Random random = new Random();
 		public static string RandomString(int length)
 		{
@@ -43,6 +43,46 @@ namespace WpfApp3
 		StringBuilder currentSb = null;
 		TextBox currentTextBox = null;
 
+		public void AddString(string nuString)
+		{
+			//case : new block
+			if (currentSb == null)
+			{
+				//create new block and hold it.
+				currentSb = new StringBuilder();
+				Dispatcher.Invoke(new Action(() =>
+				{
+					currentTextBox = new TextBox();
+					currentTextBox.BorderBrush = Brushes.Red;
+					currentTextBox.BorderThickness = new Thickness(2);
+					MainStackPanel.Children.Add(currentTextBox);
+				}));
+			}
+
+			//StringBuilder is for non-ui-process.
+			currentSb.AppendLine(nuString);
+
+			//add to current block
+			Dispatcher.Invoke(new Action(() =>
+			{
+				currentTextBox.AppendText(nuString);
+				MyScrollViewer.ScrollToEnd();
+			}));
+
+			//if current text block is too long...
+			if (currentSb.Length > 8000)
+			{
+				//save strings for other non-ui-process
+				oldStrings.Add(currentSb.ToString());
+
+				//unhold current controls
+				currentSb = null;
+				currentTextBox = null;
+			}
+		}
+
+		bool quit = true;
+
 		private void StartButton_Click(object sender, RoutedEventArgs e)
 		{
 			if (quit)
@@ -52,40 +92,12 @@ namespace WpfApp3
 				{
 					while (!quit)
 					{
-						//create new text block for every about 8000 length.
-						if (currentSb == null)
-						{
-							currentSb = new StringBuilder();
-							Dispatcher.Invoke(new Action(() =>
-							{
-								currentTextBox = new TextBox();
-								currentTextBox.BorderBrush = Brushes.Red;
-								currentTextBox.BorderThickness = new Thickness(2);
-								MainStackPanel.Children.Add(currentTextBox);
-							}));
-						}
-
 						//generate new string
 						string nuString = (lineNum++).ToString() + ":" + RandomString(80) + "\n";
 
-						//StringBuilder is for non-ui-process.
-						currentSb.AppendLine(nuString);
+						AddString(nuString);
 
-						Dispatcher.Invoke(new Action(() =>
-						{
-							currentTextBox.AppendText(nuString);
-							MyScrollViewer.ScrollToEnd();
-						}));
-
-						//if current text block is too long...
-						if (currentSb.Length > 8000)
-						{
-							//save strings for other non-ui-process
-							oldStrings.Add(currentSb.ToString());
-							currentSb = null;
-							currentTextBox = null;
-						}
-
+						//to let the other works use ui-thread.
 						System.Threading.Thread.Sleep(5);
 					}
 				});
